@@ -10,10 +10,10 @@ async function start() {
     const client = await pool.connect();
     await client.query('SELECT 1');
     client.release();
-    logger.info('Connected to PostgreSQL');
+    console.log('Connected to database');
     dbConnected = true;
   } catch (err) {
-    logger.warn('PostgreSQL not available — running without database', { error: (err as Error).message });
+    console.warn('Database not available, running without it');
   }
 
   if (dbConnected) {
@@ -21,7 +21,7 @@ async function start() {
   }
 
   app.listen(env.port, () => {
-    logger.info(`MindBridge server running on port ${env.port}`);
+    console.log(`My Mind server running on port ${env.port}`);
   });
 }
 

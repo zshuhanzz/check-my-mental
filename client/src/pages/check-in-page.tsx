@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check, MessageCircle } from 'lucide-react';
 import Button from '../components/ui/button';
-import { EMOTIONS } from '../config/emotions';
-import { MOOD_LABELS } from '../config/constants';
-import { ROUTES } from '../config/routes';
+import { emotions } from '../config/emotions';
+import { moodLabels } from '../config/constants';
 import apiClient from '../config/api-client';
+
+// positive quotes for the thank you screen
+const thankYouQuotes = [
+  "Every day is a fresh start. You're doing amazing.",
+  "Taking time to reflect shows real strength.",
+  "Small steps lead to big changes. Keep going.",
+  "You matter, and so do your feelings.",
+  "Be gentle with yourself today.",
+];
 
 export default function CheckInPage() {
   const navigate = useNavigate();
@@ -14,21 +21,21 @@ export default function CheckInPage() {
   const [rating, setRating] = useState(5);
   const [selectedEmotions, setSelectedEmotions] = useState<string[]>([]);
   const [note, setNote] = useState('');
-  const [completed, setCompleted] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showMoreEmotions, setShowMoreEmotions] = useState(false);
+  // pick a random quote
+  const [quote] = useState(thankYouQuotes[Math.floor(Math.random() * thankYouQuotes.length)]);
 
   const toggleEmotion = (name: string) => {
-    setSelectedEmotions((prev) =>
-      prev.includes(name) ? prev.filter((e) => e !== name) : [...prev, name]
-    );
+    if (selectedEmotions.includes(name)) {
+      setSelectedEmotions(selectedEmotions.filter((e) => e !== name));
+    } else {
+      setSelectedEmotions([...selectedEmotions, name]);
+    }
   };
 
-  const getMoodColor = () => {
-    if (rating <= 3) return 'bg-rose-100';
-    if (rating <= 6) return 'bg-amber-100';
-    return 'bg-sage-100';
-  };
-
+  // get mood face emoji based on rating
   const getMoodFace = () => {
     if (rating <= 2) return '😔';
     if (rating <= 4) return '😕';
@@ -45,194 +52,143 @@ export default function CheckInPage() {
         emotionTags: selectedEmotions,
         note: note || undefined,
       });
-      setCompleted(true);
     } catch {
-      // Silently mark as completed even on API failure — don't block the user
-      setCompleted(true);
-    } finally {
-      setSubmitting(false);
+      // still show thank you even if it fails
     }
+    setSubmitting(false);
+    setShowThankYou(true);
   };
 
-  if (completed) {
+  // auto redirect after thank you screen
+  useEffect(() => {
+    if (showThankYou) {
+      const timer = setTimeout(() => navigate('/dashboard'), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showThankYou, navigate]);
+
+  // which emotions to show
+  const visibleEmotions = showMoreEmotions ? emotions : emotions.slice(0, 12);
+
+  // thank you screen with animation
+  if (showThankYou) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-lg mx-auto text-center py-20"
-      >
-        <div className="w-20 h-20 rounded-full bg-sage-100 flex items-center justify-center mx-auto mb-6">
-          <Check className="text-sage-400" size={32} />
-        </div>
-        <h2 className="text-2xl font-heading font-bold text-warmgray-900 mb-2">
-          Thanks for checking in
-        </h2>
-        <p className="text-warmgray-500 mb-8">
-          Taking a moment to notice how you feel is a small but powerful thing.
-        </p>
-        <div className="flex gap-3 justify-center">
-          <Button onClick={() => navigate(ROUTES.CHAT)}>
-            <MessageCircle size={16} /> Talk about it
+      <div className="max-w-lg mx-auto text-center py-20 animate-[fadeIn_0.5s_ease-out]">
+        <div className="text-6xl mb-6">🎈</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">That's great!</h2>
+        <p className="text-gray-500 mb-4 max-w-sm mx-auto italic font-accent text-lg">"{quote}"</p>
+        <p className="text-sm text-gray-400">Redirecting to dashboard...</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button onClick={() => navigate('/chat')}>
+            <MessageCircle size={16} /> Talk to Luna
           </Button>
-          <Button variant="secondary" onClick={() => navigate(ROUTES.DASHBOARD)}>
+          <Button variant="secondary" onClick={() => navigate('/dashboard')}>
             Go to Dashboard
           </Button>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="max-w-lg mx-auto py-8"
-    >
-      {/* Progress dots */}
+    <div className="max-w-lg mx-auto py-8">
+      {/* progress dots */}
       <div className="flex justify-center gap-2 mb-10">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
-              i <= step ? 'bg-lavender-500' : 'bg-lavender-200'
-            }`}
-          />
+          <div key={i} className={`w-8 h-1.5 rounded-full ${i <= step ? 'bg-[#7E57C2]' : 'bg-[#EDE5FF]'}`} />
         ))}
       </div>
 
-      <AnimatePresence mode="wait">
-        {step === 0 && (
-          <motion.div
-            key="mood"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="text-center"
-          >
-            <h2 className="text-2xl font-heading font-bold text-warmgray-900 mb-2">
-              How are you feeling right now?
-            </h2>
-            <p className="text-warmgray-500 mb-10">Be honest — there are no wrong answers.</p>
+      {/* step 1: mood rating */}
+      {step === 0 && (
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">How are you feeling right now?</h2>
+          <p className="text-gray-500 mb-10">Be honest — there are no wrong answers.</p>
 
-            <div className={`inline-flex flex-col items-center p-8 rounded-card transition-colors duration-500 ${getMoodColor()}`}>
-              <span className="text-6xl mb-4">{getMoodFace()}</span>
-              <p className="font-heading font-bold text-warmgray-900 text-lg mb-1">{rating}/10</p>
-              <p className="text-sm text-warmgray-600">{MOOD_LABELS[rating]}</p>
-            </div>
+          <div className="inline-flex flex-col items-center p-8 rounded-2xl" style={{ backgroundColor: rating <= 3 ? '#FFE4E9' : rating <= 6 ? '#FFF8E1' : '#E8F5E9' }}>
+            <span className="text-6xl mb-4">{getMoodFace()}</span>
+            <p className="font-bold text-gray-900 text-lg">{rating}/10</p>
+            <p className="text-sm text-gray-600">{moodLabels[rating]}</p>
+          </div>
 
-            <div className="mt-8 px-4">
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={rating}
-                onChange={(e) => setRating(parseInt(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer
-                  bg-gradient-to-r from-rose-200 via-amber-200 to-sage-200
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-6
-                  [&::-webkit-slider-thumb]:h-6
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:bg-lavender-500
-                  [&::-webkit-slider-thumb]:shadow-button
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-webkit-slider-thumb]:transition-transform
-                  [&::-webkit-slider-thumb]:duration-200
-                  [&::-webkit-slider-thumb]:hover:scale-110"
-              />
-              <div className="flex justify-between mt-2 text-xs text-warmgray-400">
-                <span>Struggling</span>
-                <span>Wonderful</span>
-              </div>
-            </div>
-
-            <div className="mt-10">
-              <Button onClick={() => setStep(1)}>
-                Next <ArrowRight size={16} />
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 1 && (
-          <motion.div
-            key="emotions"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="text-center"
-          >
-            <h2 className="text-2xl font-heading font-bold text-warmgray-900 mb-2">
-              Any of these resonate?
-            </h2>
-            <p className="text-warmgray-500 mb-8">Pick as many as feel right.</p>
-
-            <div className="flex flex-wrap justify-center gap-2">
-              {EMOTIONS.map((emotion) => (
-                <button
-                  key={emotion.name}
-                  onClick={() => toggleEmotion(emotion.name)}
-                  className={`
-                    px-4 py-2 rounded-full text-sm font-medium
-                    transition-all duration-200
-                    ${selectedEmotions.includes(emotion.name)
-                      ? 'bg-lavender-500 text-white shadow-button'
-                      : 'bg-white border border-lavender-200 text-warmgray-600 hover:border-lavender-300'
-                    }
-                  `}
-                >
-                  {emotion.emoji} {emotion.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-10 flex justify-center gap-3">
-              <Button variant="ghost" onClick={() => setStep(0)}>
-                <ArrowLeft size={16} /> Back
-              </Button>
-              <Button onClick={() => setStep(2)}>
-                Next <ArrowRight size={16} />
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 2 && (
-          <motion.div
-            key="note"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="text-center"
-          >
-            <h2 className="text-2xl font-heading font-bold text-warmgray-900 mb-2">
-              Anything else on your mind?
-            </h2>
-            <p className="text-warmgray-500 mb-8">Totally optional — just if you want to jot something down.</p>
-
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Whatever comes to mind..."
-              rows={4}
-              className="w-full px-4 py-3 bg-white border border-lavender-200 rounded-card
-                text-warmgray-700 placeholder:text-warmgray-400
-                focus:outline-none focus:ring-2 focus:ring-lavender-300 focus:border-transparent
-                transition-all duration-200 resize-none font-accent text-lg"
+          <div className="mt-8 px-4">
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={rating}
+              onChange={(e) => setRating(parseInt(e.target.value))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{ background: 'linear-gradient(to right, #FFE4E9, #FFF8E1, #E8F5E9)' }}
             />
-
-            <div className="mt-10 flex justify-center gap-3">
-              <Button variant="ghost" onClick={() => setStep(1)}>
-                <ArrowLeft size={16} /> Back
-              </Button>
-              <Button onClick={handleComplete} loading={submitting}>
-                Done <Check size={16} />
-              </Button>
+            <div className="flex justify-between mt-2 text-xs text-gray-400">
+              <span>Not at all</span>
+              <span>Very</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          </div>
+
+          <div className="mt-10">
+            <Button onClick={() => setStep(1)}>Next <ArrowRight size={16} /></Button>
+          </div>
+        </div>
+      )}
+
+      {/* step 2: emotions - bigger boxes like the reference image */}
+      {step === 1 && (
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">How would you describe how you're feeling today?</h2>
+          <p className="text-gray-500 mb-8">Pick as many as feel right.</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {visibleEmotions.map((emotion) => (
+              <button
+                key={emotion.name}
+                onClick={() => toggleEmotion(emotion.name)}
+                className={`py-4 px-6 rounded-2xl text-base font-semibold transition-colors ${
+                  selectedEmotions.includes(emotion.name)
+                    ? 'bg-[#2D2A2A] text-white'
+                    : 'bg-white border border-gray-200 text-gray-800 hover:border-[#D4C4F5]'
+                }`}
+              >
+                {emotion.name}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowMoreEmotions(!showMoreEmotions)}
+            className="mt-4 px-6 py-2 text-sm text-gray-500 bg-gray-100 rounded-full hover:bg-gray-200"
+          >
+            {showMoreEmotions ? 'Show less' : 'Show more emotions'}
+          </button>
+
+          <div className="mt-8 flex justify-center gap-3">
+            <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft size={16} /> Back</Button>
+            <Button onClick={() => setStep(2)}>Next <ArrowRight size={16} /></Button>
+          </div>
+        </div>
+      )}
+
+      {/* step 3: optional note */}
+      {step === 2 && (
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Anything else on your mind?</h2>
+          <p className="text-gray-500 mb-8">Totally optional.</p>
+
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Whatever comes to mind..."
+            rows={4}
+            className="w-full px-4 py-3 bg-white border border-[#D4C4F5] rounded-2xl text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#B39DDB] resize-none"
+          />
+
+          <div className="mt-8 flex justify-center gap-3">
+            <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft size={16} /> Back</Button>
+            <Button onClick={handleComplete} loading={submitting}>Done <Check size={16} /></Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

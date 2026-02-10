@@ -8,8 +8,7 @@ export function validate(schema: ZodSchema) {
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        const message = err.errors.map((e) => e.message).join(', ');
-        res.status(400).json({ error: message });
+        res.status(400).json({ error: err.errors[0]?.message || 'Invalid input' });
         return;
       }
       next(err);

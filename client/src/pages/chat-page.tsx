@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { MessageCircle, Send, Plus, Phone, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/button';
 import Card from '../components/ui/card';
 import Spinner from '../components/ui/spinner';
 import apiClient from '../config/api-client';
-import { ROUTES } from '../config/routes';
-import { CRISIS_RESOURCES } from '../config/constants';
+import { crisisResources } from '../config/constants';
 import type { Conversation, Message } from '../types';
 
 export default function ChatPage() {
@@ -19,55 +17,48 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCrisisResources, setShowCrisisResources] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = () => {
+  // scroll to bottom when new messages come in
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
-  useEffect(() => { scrollToBottom(); }, [messages]);
-
-  // Load conversation list
+  // load conversation list
   useEffect(() => {
     apiClient.get('/conversations').then((r) => setConversations(r.data)).catch(() => {});
   }, []);
 
-  // Load messages when conversation changes
+  // load messages when conversation changes
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
       return;
     }
     setLoading(true);
-    apiClient
-      .get(`/conversations/${conversationId}`)
-      .then((r) => {
-        setMessages(r.data.messages || []);
-      })
-      .catch(() => navigate(ROUTES.CHAT))
+    apiClient.get(`/conversations/${conversationId}`)
+      .then((r) => setMessages(r.data.messages || []))
+      .catch(() => navigate('/chat'))
       .finally(() => setLoading(false));
-  }, [conversationId, navigate]);
+  }, [conversationId]);
 
-  const startConversation = useCallback(async (initialMessage?: string) => {
+  const startConversation = async (firstMessage?: string) => {
     try {
       const { data: conv } = await apiClient.post('/conversations', {});
-      setConversations((prev) => [conv, ...prev]);
-      navigate(ROUTES.CHAT_CONVERSATION(conv.id));
-      if (initialMessage) {
-        // Send the initial message after navigating
-        setTimeout(async () => {
-          await sendMessageToConversation(conv.id, initialMessage);
-        }, 100);
+      setConversations([conv, ...conversations]);
+      navigate(`/chat/${conv.id}`);
+      if (firstMessage) {
+        // wait a bit then send the message
+        setTimeout(() => sendMessage(conv.id, firstMessage), 100);
       }
     } catch {
-      // silently fail
+      // ignore
     }
-  }, [navigate]);
+  };
 
-  const sendMessageToConversation = async (convId: string, content: string) => {
-    const userMessage: Message = {
+  const sendMessage = async (convId: string, content: string) => {
+    // add user message to the list right away
+    const userMsg: Message = {
       id: `temp-${Date.now()}`,
       conversationId: convId,
       role: 'user',
@@ -75,45 +66,37 @@ export default function ChatPage() {
       isCrisisFlagged: false,
       createdAt: new Date().toISOString(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMsg]);
     setSending(true);
 
     try {
       const { data } = await apiClient.post(`/conversations/${convId}/messages`, { content });
 
-      const aiMessage: Message = {
+      // add ai response
+      setMessages((prev) => [...prev, {
         id: data.message.id,
         conversationId: convId,
         role: 'assistant',
         content: data.message.content,
         isCrisisFlagged: data.crisisDetected,
         createdAt: new Date().toISOString(),
-      };
+      }]);
 
-      setMessages((prev) => [...prev, aiMessage]);
+      if (data.crisisDetected) setShowCrisisResources(true);
 
-      if (data.crisisDetected) {
-        setShowCrisisResources(true);
-      }
-
-      // Refresh conversation list for updated title
+      // refresh conversation titles
       apiClient.get('/conversations').then((r) => setConversations(r.data)).catch(() => {});
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          conversationId: convId,
-          role: 'assistant',
-          content: "I'm having a little trouble right now. Could you try sending that again?",
-          isCrisisFlagged: false,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setSending(false);
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
+        conversationId: convId,
+        role: 'assistant',
+        content: "I'm having a little trouble right now. Could you try again?",
+        isCrisisFlagged: false,
+        createdAt: new Date().toISOString(),
+      }]);
     }
+    setSending(false);
   };
 
   const handleSend = async () => {
@@ -124,10 +107,11 @@ export default function ChatPage() {
     if (!conversationId) {
       await startConversation(content);
     } else {
-      await sendMessageToConversation(conversationId, content);
+      await sendMessage(conversationId, content);
     }
   };
 
+  // enter to send
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -135,25 +119,17 @@ export default function ChatPage() {
     }
   };
 
-  // Empty state — no active conversation
+  // empty state when no conversation is active
   if (!conversationId && messages.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-4xl mx-auto h-full flex flex-col"
-      >
+      <div className="max-w-4xl mx-auto h-full flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-lavender-100 flex items-center justify-center mb-6">
-            <MessageCircle className="text-lavender-400" size={28} />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6" style={{ backgroundColor: '#2C1660' }}>
+            <span className="text-2xl">🌙</span>
           </div>
-          <h2 className="text-xl font-heading font-bold text-warmgray-900 mb-2">
-            What's on your mind?
-          </h2>
-          <p className="text-warmgray-500 max-w-md mb-8">
-            Start a conversation with Bridge. I'm here to listen, not to judge.
-            Whatever you're going through, you don't have to go through it alone.
+          <h2 className="text-xl font-bold text-gray-900 mb-2">What's on your mind?</h2>
+          <p className="text-gray-500 max-w-md mb-8">
+            Start a conversation with Luna. I'm here to listen, not to judge.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full">
@@ -166,149 +142,137 @@ export default function ChatPage() {
               <button
                 key={prompt}
                 onClick={() => startConversation(prompt)}
-                className="p-4 text-left text-sm text-warmgray-600 bg-white border border-lavender-100 rounded-card hover:border-lavender-300 hover:shadow-soft transition-all duration-200"
+                className="p-4 text-left text-sm text-gray-600 bg-white border border-[#D4C4F5] rounded-2xl hover:border-[#7E57C2] transition-colors"
               >
                 {prompt}
               </button>
             ))}
           </div>
 
+          {/* previous conversations */}
           {conversations.length > 0 && (
             <div className="mt-10 w-full max-w-lg">
-              <p className="text-xs text-warmgray-400 mb-3 uppercase tracking-wide">Previous conversations</p>
+              <p className="text-xs text-gray-400 mb-3 uppercase">Previous conversations</p>
               <div className="space-y-2">
                 {conversations.slice(0, 5).map((conv) => (
                   <button
                     key={conv.id}
-                    onClick={() => navigate(ROUTES.CHAT_CONVERSATION(conv.id))}
-                    className="w-full p-3 text-left text-sm bg-white border border-lavender-100 rounded-card hover:border-lavender-300 transition-colors"
+                    onClick={() => navigate(`/chat/${conv.id}`)}
+                    className="w-full p-3 text-left text-sm bg-white border border-[#EDE5FF] rounded-2xl hover:border-[#D4C4F5]"
                   >
-                    <p className="text-warmgray-700 truncate">{conv.title || 'Untitled conversation'}</p>
-                    <p className="text-xs text-warmgray-400 mt-1">
-                      {new Date(conv.updatedAt || conv.createdAt).toLocaleDateString()}
-                    </p>
+                    <p className="text-gray-700 truncate">{conv.title || 'Untitled conversation'}</p>
+                    <p className="text-xs text-gray-400 mt-1">{new Date(conv.updatedAt || conv.createdAt).toLocaleDateString()}</p>
                   </button>
                 ))}
               </div>
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
     );
   }
 
+  // dark purple theme for the chat with Luna
   return (
     <div className="max-w-4xl mx-auto h-full flex flex-col">
-      {/* Chat header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-lavender-100">
-        <button
-          onClick={() => navigate(ROUTES.CHAT)}
-          className="p-2 rounded-button text-warmgray-400 hover:bg-lavender-50 transition-colors"
-        >
+      {/* chat header - dark purple */}
+      <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: '#40237A' }}>
+        <button onClick={() => navigate('/chat')} className="p-2 rounded-xl text-gray-400 hover:bg-[#F5F0FF]">
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1">
-          <p className="font-heading font-semibold text-warmgray-900 text-sm">
-            Talking with Bridge
-          </p>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2C1660' }}>
+            <span className="text-sm">🌙</span>
+          </div>
+          <p className="font-semibold text-sm" style={{ color: '#2C1660' }}>Talking with Luna</p>
         </div>
-        <button
-          onClick={() => startConversation()}
-          className="p-2 rounded-button text-warmgray-400 hover:bg-lavender-50 transition-colors"
-          title="New conversation"
-        >
+        <div className="flex-1" />
+        <button onClick={() => startConversation()} className="p-2 rounded-xl text-gray-400 hover:bg-[#F5F0FF]" title="New conversation">
           <Plus size={18} />
         </button>
       </div>
 
-      {/* Messages */}
+      {/* messages area */}
       <div className="flex-1 overflow-y-auto py-6 space-y-4">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Spinner className="text-lavender-400" />
-          </div>
+          <div className="flex justify-center py-10"><Spinner className="text-[#7E57C2]" /></div>
         ) : (
           messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
                 className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-lavender-500 text-white rounded-br-md'
-                    : 'bg-sky-100 text-warmgray-700 rounded-bl-md'
+                    ? 'text-white rounded-br-md'
+                    : 'rounded-bl-md'
                 }`}
+                style={{
+                  backgroundColor: msg.role === 'user' ? '#2C1660' : '#F5F0FF',
+                  color: msg.role === 'user' ? 'white' : '#2D2A2A',
+                }}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
-            </motion.div>
+            </div>
           ))
         )}
 
+        {/* typing indicator */}
         {sending && (
           <div className="flex justify-start">
-            <div className="bg-sky-100 rounded-2xl rounded-bl-md px-4 py-3">
+            <div className="rounded-2xl rounded-bl-md px-4 py-3" style={{ backgroundColor: '#F5F0FF' }}>
               <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-lavender-300 animate-pulse-soft" />
-                <div className="w-2 h-2 rounded-full bg-lavender-300 animate-pulse-soft" style={{ animationDelay: '0.3s' }} />
-                <div className="w-2 h-2 rounded-full bg-lavender-300 animate-pulse-soft" style={{ animationDelay: '0.6s' }} />
+                <div className="w-2 h-2 rounded-full bg-[#B39DDB] animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-[#B39DDB] animate-pulse" style={{ animationDelay: '0.3s' }} />
+                <div className="w-2 h-2 rounded-full bg-[#B39DDB] animate-pulse" style={{ animationDelay: '0.6s' }} />
               </div>
             </div>
           </div>
         )}
 
-        {/* Crisis resources inline */}
+        {/* crisis resources */}
         {showCrisisResources && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="border-rose-200 bg-rose-100/50">
-              <div className="flex items-center gap-2 mb-3">
-                <Phone size={16} className="text-rose-400" />
-                <p className="font-heading font-bold text-warmgray-900 text-sm">Help is available</p>
-              </div>
-              <div className="space-y-2">
-                {CRISIS_RESOURCES.map((r) => (
-                  <div key={r.name} className="text-sm">
-                    <p className="font-medium text-warmgray-700">{r.name}</p>
-                    <p className="text-warmgray-500">{r.action}</p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
+          <Card className="border-red-200 bg-red-50">
+            <div className="flex items-center gap-2 mb-3">
+              <Phone size={16} className="text-red-400" />
+              <p className="font-bold text-gray-900 text-sm">Help is available</p>
+            </div>
+            <div className="space-y-2">
+              {crisisResources.map((r) => (
+                <div key={r.name} className="text-sm">
+                  <p className="font-medium text-gray-700">{r.name}</p>
+                  <p className="text-gray-500">{r.action}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-lavender-100 pt-4 pb-2">
+      {/* input area - dark purple accent */}
+      <div className="border-t pt-4 pb-2" style={{ borderColor: '#EDE5FF' }}>
         <div className="flex items-end gap-3">
           <textarea
-            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 px-4 py-3 bg-white border border-lavender-200 rounded-card
-              text-warmgray-700 placeholder:text-warmgray-400
-              focus:outline-none focus:ring-2 focus:ring-lavender-300 focus:border-transparent
-              transition-all duration-200 resize-none text-sm max-h-32"
-            style={{ minHeight: '44px' }}
+            className="flex-1 px-4 py-3 bg-white border rounded-2xl text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 resize-none text-sm"
+            style={{ borderColor: '#D4C4F5', maxHeight: '128px', minHeight: '44px' }}
           />
-          <Button
+          <button
             onClick={handleSend}
             disabled={!input.trim() || sending}
-            className="shrink-0"
+            className="shrink-0 p-3 rounded-xl text-white disabled:opacity-50"
+            style={{ backgroundColor: '#2C1660' }}
           >
             <Send size={16} />
-          </Button>
+          </button>
         </div>
-        <p className="text-xs text-warmgray-400 mt-2 text-center">
-          Bridge is an AI companion, not a therapist. For emergencies, call 988.
+        <p className="text-xs text-gray-400 mt-2 text-center">
+          Luna is an AI companion, not a therapist. For emergencies, call 988.
         </p>
       </div>
     </div>

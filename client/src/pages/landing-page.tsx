@@ -1,100 +1,108 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Heart, Shield, TrendingUp } from 'lucide-react';
+import { Heart, MessageCircle, BookOpen, BarChart2, Shield } from 'lucide-react';
 import Button from '../components/ui/button';
-import { ROUTES } from '../config/routes';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-lavender-50 via-white to-sky-50">
-      {/* Crisis Banner - always visible */}
-      <div className="bg-rose-100 text-center py-2 px-4">
-        <p className="text-sm text-warmgray-700">
-          If you're in crisis, help is available.{' '}
-          <strong className="text-rose-400">Call or text 988</strong>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #F5F0FF, white, #F0F7FF)' }}>
+      {/* crisis info */}
+      <div className="bg-[#FFE4E9] text-center py-2 px-4">
+        <p className="text-sm text-gray-700">
+          If you're in crisis, help is available. <strong className="text-red-400">Call or text 988</strong>
         </p>
       </div>
 
-      {/* Hero */}
-      <div className="max-w-5xl mx-auto px-4 pt-20 pb-32 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        >
-          {/* Breathing circle */}
-          <div className="flex justify-center mb-12">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-lavender-200/50 animate-breathe" />
-              <div className="absolute inset-3 rounded-full bg-lavender-300/40 animate-breathe" style={{ animationDelay: '0.5s' }} />
-              <div className="absolute inset-6 rounded-full bg-lavender-400/30 animate-breathe" style={{ animationDelay: '1s' }} />
+      {/* hero section */}
+      <div className="max-w-5xl mx-auto px-4 pt-16 pb-12 text-center">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          A quiet space for your mind
+        </h1>
+        <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
+          My Mind helps you check in with yourself, talk through what's on your mind,
+          and notice patterns in how you're feeling. No judgment, just support.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <Link to="/register">
+            <Button>Sign up now</Button>
+          </Link>
+          <Link to="/login">
+            <Button variant="secondary">Sign in</Button>
+          </Link>
+        </div>
+
+        {/* features list - like a product showcase */}
+        <div className="max-w-2xl mx-auto">
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-6 border border-[#EDE5FF] flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+                <MessageCircle size={22} className="text-[#7E57C2]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Talk to Luna</h3>
+                <p className="text-sm text-gray-500">Chat with Luna, an AI companion who listens without judgment and asks the right questions.</p>
+              </div>
+              <span className="ml-auto px-3 py-1 bg-[#F5F0FF] text-[#7E57C2] text-xs font-medium rounded-full shrink-0">AI</span>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-[#EDE5FF] flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+                <Heart size={22} className="text-[#E57388]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Daily Check-ins</h3>
+                <p className="text-sm text-gray-500">A gentle prompt to notice how you're feeling. Track your mood over time and spot patterns.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-[#EDE5FF] flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+                <BookOpen size={22} className="text-[#7E57C2]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Journal</h3>
+                <p className="text-sm text-gray-500">Write about your day, upload photos, and keep track of your thoughts in a private space.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-[#EDE5FF] flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+                <BarChart2 size={22} className="text-[#7E57C2]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Mood Trends</h3>
+                <p className="text-sm text-gray-500">See your mood patterns over time with charts and insights on your emotional health.</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-[#EDE5FF] flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+                <Shield size={22} className="text-[#66BB6A]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Private & Safe</h3>
+                <p className="text-sm text-gray-500">Everything stays private. Use it anonymously, export your data, or share with your therapist.</p>
+              </div>
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-warmgray-900 mb-4">
-            A quiet space for your mind
-          </h1>
-          <p className="text-lg text-warmgray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            MindBridge helps you check in with yourself, talk through what's on your mind,
-            and notice patterns in how you're feeling. No judgment, just support.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to={ROUTES.REGISTER}>
-              <Button size="lg">Get started</Button>
-            </Link>
-            <Link to={ROUTES.LOGIN}>
-              <Button variant="secondary" size="lg">Sign in</Button>
+          {/* sign up CTA at bottom */}
+          <div className="mt-10 py-6 text-center">
+            <p className="text-gray-500 mb-3">Free to use. No credit card required.</p>
+            <Link to="/register">
+              <Button>Sign up now</Button>
             </Link>
           </div>
-        </motion.div>
-
-        {/* Features */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24"
-        >
-          <FeatureCard
-            icon={<Heart className="text-rose-400" size={24} />}
-            title="Daily check-ins"
-            description="A gentle prompt to notice how you're feeling. Track your mood over time and spot patterns."
-          />
-          <FeatureCard
-            icon={<TrendingUp className="text-lavender-500" size={24} />}
-            title="Talk it through"
-            description="Chat with Bridge, an AI companion who listens without judgment and asks the right questions."
-          />
-          <FeatureCard
-            icon={<Shield className="text-sage-400" size={24} />}
-            title="Your space, your pace"
-            description="Everything stays private. Use it anonymously, export your data, or share with your therapist."
-          />
-        </motion.div>
+        </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-lavender-100 py-8 text-center">
-        <p className="text-sm text-warmgray-400">
-          MindBridge is not a substitute for professional mental health care.{' '}
-          <Link to={ROUTES.PRIVACY} className="text-lavender-500 hover:text-lavender-600 underline">
-            Privacy Policy
-          </Link>
+      {/* footer */}
+      <footer className="bg-white border-t border-[#EDE5FF] py-8 text-center">
+        <p className="text-sm text-gray-400">
+          My Mind is not a substitute for professional mental health care.{' '}
+          <Link to="/privacy" className="text-[#7E57C2] underline">Privacy Policy</Link>
         </p>
       </footer>
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="glass-card p-8 text-center">
-      <div className="w-12 h-12 rounded-full bg-lavender-50 flex items-center justify-center mx-auto mb-4">
-        {icon}
-      </div>
-      <h3 className="font-heading font-bold text-warmgray-900 mb-2">{title}</h3>
-      <p className="text-sm text-warmgray-500 leading-relaxed">{description}</p>
     </div>
   );
 }

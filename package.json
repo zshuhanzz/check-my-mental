@@ -1,5 +1,5 @@
 {
-  "name": "mindbridge",
+  "name": "mymind",
   "private": true,
   "workspaces": ["client", "server"],
   "scripts": {

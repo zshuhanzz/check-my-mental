@@ -40,7 +40,7 @@ export const userController = {
     try {
       await userRepository.softDelete(req.user!.userId);
       res.clearCookie('refreshToken', { path: '/api/auth' });
-      res.json({ message: 'Account deleted. We hope you found some value in MindBridge.' });
+      res.json({ message: 'Account deleted. We hope you found some value in My Mind.' });
     } catch (err) {
       next(err);
     }

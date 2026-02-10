@@ -1,3 +1,4 @@
+// just putting routes here so i dont have to remember them
 export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
@@ -5,12 +6,10 @@ export const ROUTES = {
   ONBOARDING: '/onboarding',
   DASHBOARD: '/dashboard',
   CHAT: '/chat',
-  CHAT_CONVERSATION: (id: string) => `/chat/${id}`,
   CHECK_IN: '/check-in',
   JOURNAL: '/journal',
   JOURNAL_NEW: '/journal/new',
-  JOURNAL_ENTRY: (id: string) => `/journal/${id}`,
   SETTINGS: '/settings',
   EXPORT: '/export',
   PRIVACY: '/privacy',
-} as const;
+};

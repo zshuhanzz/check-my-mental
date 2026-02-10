@@ -8,7 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/mindbridge',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/mymind',
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
   jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
@@ -24,7 +24,7 @@ export const env = {
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
-    subject: process.env.VAPID_SUBJECT || 'mailto:admin@mindbridge.app',
+    subject: process.env.VAPID_SUBJECT || 'mailto:admin@mymind.app',
   },
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
 } as const;

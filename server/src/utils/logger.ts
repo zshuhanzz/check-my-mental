@@ -1,21 +1,9 @@
-import winston from 'winston';
-import { env } from '../config/environment.js';
-
-const logger = winston.createLogger({
-  level: env.nodeEnv === 'production' ? 'info' : 'debug',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    env.nodeEnv === 'production'
-      ? winston.format.json()
-      : winston.format.combine(
-          winston.format.colorize(),
-          winston.format.printf(({ timestamp, level, message, stack }) => {
-            return `${timestamp} ${level}: ${stack || message}`;
-          })
-        )
-  ),
-  transports: [new winston.transports.Console()],
-});
+// simple logger
+const logger = {
+  info: (...args: any[]) => console.log('[INFO]', ...args),
+  warn: (...args: any[]) => console.warn('[WARN]', ...args),
+  error: (...args: any[]) => console.error('[ERROR]', ...args),
+  debug: (...args: any[]) => console.log('[DEBUG]', ...args),
+};
 
 export default logger;

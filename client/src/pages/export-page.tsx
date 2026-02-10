@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { FileText, Table, FileDown, ClipboardList } from 'lucide-react';
 import Card from '../components/ui/card';
 import Button from '../components/ui/button';
@@ -17,14 +16,13 @@ export default function ExportPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'mindbridge-mood-data.csv';
+      a.download = 'mymind-mood-data.csv';
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      // silently fail
-    } finally {
-      setCsvLoading(false);
+      // ignore
     }
+    setCsvLoading(false);
   };
 
   const handleTherapistSummary = async () => {
@@ -33,55 +31,42 @@ export default function ExportPage() {
       const { data } = await apiClient.get('/export/therapist-summary');
       setSummaryData(data);
     } catch {
-      // silently fail
-    } finally {
-      setSummaryLoading(false);
+      // ignore
     }
+    setSummaryLoading(false);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="max-w-2xl mx-auto space-y-6"
-    >
+    <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-heading font-bold text-warmgray-900">Export your data</h2>
-        <p className="text-warmgray-500 mt-1">
-          Your data belongs to you. Download it anytime, or share a summary with your therapist.
-        </p>
+        <h2 className="text-2xl font-bold text-gray-900">Export your data</h2>
+        <p className="text-gray-500 mt-1">Your data belongs to you. Download it anytime.</p>
       </div>
 
-      <Card hoverable>
+      <Card>
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
-            <Table className="text-sky-400" size={18} />
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <Table className="text-blue-400" size={18} />
           </div>
           <div className="flex-1">
-            <h3 className="font-heading font-bold text-warmgray-900">CSV Export</h3>
-            <p className="text-sm text-warmgray-500 mt-1">
-              Raw mood data in spreadsheet format. Perfect for your own analysis.
-            </p>
-            <Button variant="secondary" size="sm" className="mt-3" onClick={handleCSV} loading={csvLoading}>
+            <h3 className="font-bold text-gray-900">CSV Export</h3>
+            <p className="text-sm text-gray-500 mt-1">Raw mood data in spreadsheet format.</p>
+            <Button variant="secondary" className="mt-3" onClick={handleCSV} loading={csvLoading}>
               <FileDown size={14} /> Download CSV
             </Button>
           </div>
         </div>
       </Card>
 
-      <Card hoverable>
+      <Card>
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-lavender-100 flex items-center justify-center shrink-0">
-            <ClipboardList className="text-lavender-500" size={18} />
+          <div className="w-10 h-10 rounded-full bg-[#F5F0FF] flex items-center justify-center shrink-0">
+            <ClipboardList className="text-[#7E57C2]" size={18} />
           </div>
           <div className="flex-1">
-            <h3 className="font-heading font-bold text-warmgray-900">Therapist Summary</h3>
-            <p className="text-sm text-warmgray-500 mt-1">
-              A structured overview of your mood data from the past 30 days.
-              You can share this with your therapist to help them understand how you've been.
-            </p>
-            <Button variant="secondary" size="sm" className="mt-3" onClick={handleTherapistSummary} loading={summaryLoading}>
+            <h3 className="font-bold text-gray-900">Therapist Summary</h3>
+            <p className="text-sm text-gray-500 mt-1">A summary of your mood data from the past 30 days to share with your therapist.</p>
+            <Button variant="secondary" className="mt-3" onClick={handleTherapistSummary} loading={summaryLoading}>
               <FileText size={14} /> Generate summary
             </Button>
           </div>
@@ -90,8 +75,8 @@ export default function ExportPage() {
 
       {summaryData && (
         <Card>
-          <h3 className="font-heading font-bold text-warmgray-900 mb-4">Your Summary</h3>
-          <div className="space-y-3 text-sm text-warmgray-600">
+          <h3 className="font-bold text-gray-900 mb-4">Your Summary</h3>
+          <div className="space-y-3 text-sm text-gray-600">
             <p><strong>Period:</strong> {summaryData.period}</p>
             <p><strong>Total check-ins:</strong> {summaryData.overview?.totalCheckIns || 0}</p>
             <p><strong>Average mood:</strong> {summaryData.overview?.averageMood || 'N/A'}/10</p>
@@ -101,17 +86,14 @@ export default function ExportPage() {
                 <strong>Top emotions:</strong>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {summaryData.overview.topEmotions.map((e: any) => (
-                    <span key={e.emotion} className="px-2 py-0.5 bg-lavender-50 text-lavender-600 text-xs rounded-full">
-                      {e.emotion} ({e.count})
-                    </span>
+                    <span key={e.emotion} className="px-2 py-0.5 bg-[#F5F0FF] text-[#7E57C2] text-xs rounded-full">{e.emotion} ({e.count})</span>
                   ))}
                 </div>
               </div>
             )}
-            <p className="text-xs text-warmgray-400 mt-4 italic">{summaryData.disclaimer}</p>
           </div>
         </Card>
       )}
-    </motion.div>
+    </div>
   );
 }

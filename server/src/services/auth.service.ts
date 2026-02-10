@@ -6,15 +6,12 @@ import { userRepository } from '../repositories/user.repository.js';
 import { AppError } from '../middleware/error-handler.js';
 import type { JwtPayload, UserRow } from '../types/index.js';
 
-function generateAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, env.jwtAccessSecret, { expiresIn: env.jwtAccessExpiry } as jwt.SignOptions);
+function makeToken(payload: JwtPayload, secret: string, expiry: string): string {
+  return jwt.sign(payload, secret, { expiresIn: expiry } as jwt.SignOptions);
 }
 
-function generateRefreshToken(payload: JwtPayload): string {
-  return jwt.sign(payload, env.jwtRefreshSecret, { expiresIn: env.jwtRefreshExpiry } as jwt.SignOptions);
-}
-
-function sanitizeUser(user: UserRow) {
+// strip out sensitive stuff from user before sending to client
+function cleanUser(user: UserRow) {
   return {
     id: user.id,
     email: user.email,
@@ -34,14 +31,14 @@ export const authService = {
       throw new AppError(409, 'An account with this email already exists.');
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, 10);
     const user = await userRepository.create({ email, passwordHash, displayName });
 
-    const tokenPayload: JwtPayload = { userId: user.id, isAnonymous: false };
+    const payload: JwtPayload = { userId: user.id, isAnonymous: false };
     return {
-      user: sanitizeUser(user),
-      accessToken: generateAccessToken(tokenPayload),
-      refreshToken: generateRefreshToken(tokenPayload),
+      user: cleanUser(user),
+      accessToken: makeToken(payload, env.jwtAccessSecret, env.jwtAccessExpiry),
+      refreshToken: makeToken(payload, env.jwtRefreshSecret, env.jwtRefreshExpiry),
     };
   },
 
@@ -58,28 +55,28 @@ export const authService = {
 
     await userRepository.updateLastActive(user.id);
 
-    const tokenPayload: JwtPayload = { userId: user.id, isAnonymous: user.is_anonymous };
+    const payload: JwtPayload = { userId: user.id, isAnonymous: user.is_anonymous };
     return {
-      user: sanitizeUser(user),
-      accessToken: generateAccessToken(tokenPayload),
-      refreshToken: generateRefreshToken(tokenPayload),
+      user: cleanUser(user),
+      accessToken: makeToken(payload, env.jwtAccessSecret, env.jwtAccessExpiry),
+      refreshToken: makeToken(payload, env.jwtRefreshSecret, env.jwtRefreshExpiry),
     };
   },
 
   async createAnonymousSession() {
-    const anonymousToken = crypto.randomBytes(32).toString('hex');
+    const anonToken = crypto.randomBytes(32).toString('hex');
     const user = await userRepository.create({
       displayName: 'Anonymous',
       isAnonymous: true,
-      anonymousToken,
+      anonymousToken: anonToken,
     });
 
-    const tokenPayload: JwtPayload = { userId: user.id, isAnonymous: true };
+    const payload: JwtPayload = { userId: user.id, isAnonymous: true };
     return {
-      user: sanitizeUser(user),
-      accessToken: generateAccessToken(tokenPayload),
-      refreshToken: generateRefreshToken(tokenPayload),
-      anonymousToken,
+      user: cleanUser(user),
+      accessToken: makeToken(payload, env.jwtAccessSecret, env.jwtAccessExpiry),
+      refreshToken: makeToken(payload, env.jwtRefreshSecret, env.jwtRefreshExpiry),
+      anonymousToken: anonToken,
     };
   },
 
@@ -90,24 +87,24 @@ export const authService = {
       if (!user) throw new AppError(401, 'User not found.');
 
       return {
-        accessToken: generateAccessToken({ userId: user.id, isAnonymous: user.is_anonymous }),
+        accessToken: makeToken({ userId: user.id, isAnonymous: user.is_anonymous }, env.jwtAccessSecret, env.jwtAccessExpiry),
       };
     } catch {
-      throw new AppError(401, 'Invalid refresh token. Please sign in again.');
+      throw new AppError(401, 'Invalid refresh token.');
     }
   },
 
   async getProfile(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) throw new AppError(404, 'User not found.');
-    return sanitizeUser(user);
+    return cleanUser(user);
   },
 
   async convertAnonymousAccount(userId: string, email: string, password: string) {
     const existing = await userRepository.findByEmail(email);
-    if (existing) throw new AppError(409, 'An account with this email already exists.');
+    if (existing) throw new AppError(409, 'Email already taken.');
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, 10);
     const user = await userRepository.update(userId, {
       email,
       passwordHash,
@@ -115,6 +112,6 @@ export const authService = {
       anonymousToken: null,
     });
     if (!user) throw new AppError(404, 'User not found.');
-    return sanitizeUser(user);
+    return cleanUser(user);
   },
 };

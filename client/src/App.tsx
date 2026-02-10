@@ -19,74 +19,20 @@ import ExportPage from './pages/export-page';
 import PrivacyPage from './pages/privacy-page';
 import NotFoundPage from './pages/not-found-page';
 
+// protect routes that need login
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-warmgray-50">
-        <Spinner size="lg" className="text-lavender-400" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
   return <Outlet />;
 }
 
+// redirect logged in users away from login/register
 function PublicRoute() {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-warmgray-50">
-        <Spinner size="lg" className="text-lavender-400" />
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>;
+  if (isAuthenticated) return <Navigate to="/dashboard" />;
   return <Outlet />;
-}
-
-function AppRoutes() {
-  return (
-    <Routes>
-      {/* Public routes - redirect to dashboard if logged in */}
-      <Route element={<PublicRoute />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
-
-      {/* Always accessible */}
-      <Route path="/privacy" element={<PrivacyPage />} />
-
-      {/* Protected routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route element={<AppShell />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/chat/:conversationId" element={<ChatPage />} />
-          <Route path="/check-in" element={<CheckInPage />} />
-          <Route path="/journal" element={<JournalPage />} />
-          <Route path="/journal/new" element={<JournalEntryPage />} />
-          <Route path="/journal/:id" element={<JournalEntryPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/export" element={<ExportPage />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  );
 }
 
 export default function App() {
@@ -94,7 +40,32 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CrisisBanner />
-        <AppRoutes />
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+
+          <Route path="/privacy" element={<PrivacyPage />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route element={<AppShell />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:conversationId" element={<ChatPage />} />
+              <Route path="/check-in" element={<CheckInPage />} />
+              <Route path="/journal" element={<JournalPage />} />
+              <Route path="/journal/new" element={<JournalEntryPage />} />
+              <Route path="/journal/:id" element={<JournalEntryPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/export" element={<ExportPage />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );

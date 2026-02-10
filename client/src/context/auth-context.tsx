@@ -1,76 +1,68 @@
-import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import apiClient from '../config/api-client';
 import type { User } from '../types';
 
-interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
+// auth context - stores the current user and login/logout functions
+const AuthContext = createContext<any>(null);
 
-interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
-  loginAnonymous: () => Promise<void>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
+export function useAuth() {
+  return useContext(AuthContext);
 }
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = useCallback(async () => {
+  // check if user is logged in on page load
+  useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      setState({ user: null, isAuthenticated: false, isLoading: false });
+      setIsLoading(false);
       return;
     }
-    try {
-      const { data } = await apiClient.get<User>('/users/me');
-      setState({ user: data, isAuthenticated: true, isLoading: false });
-    } catch {
-      localStorage.removeItem('accessToken');
-      setState({ user: null, isAuthenticated: false, isLoading: false });
-    }
+    apiClient.get('/users/me')
+      .then((res) => {
+        setUser(res.data);
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        localStorage.removeItem('accessToken');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
-
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
 
   const login = async (email: string, password: string) => {
     const { data } = await apiClient.post('/auth/login', { email, password });
     localStorage.setItem('accessToken', data.accessToken);
-    setState({ user: data.user, isAuthenticated: true, isLoading: false });
+    setUser(data.user);
+    setIsAuthenticated(true);
   };
 
   const register = async (email: string, password: string, displayName: string) => {
     const { data } = await apiClient.post('/auth/register', { email, password, displayName });
     localStorage.setItem('accessToken', data.accessToken);
-    setState({ user: data.user, isAuthenticated: true, isLoading: false });
+    setUser(data.user);
+    setIsAuthenticated(true);
   };
 
   const loginAnonymous = async () => {
     const { data } = await apiClient.post('/auth/anonymous');
     localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('anonymousToken', data.anonymousToken);
-    setState({ user: data.user, isAuthenticated: true, isLoading: false });
+    if (data.anonymousToken) localStorage.setItem('anonymousToken', data.anonymousToken);
+    setUser(data.user);
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('anonymousToken');
-    setState({ user: null, isAuthenticated: false, isLoading: false });
+    setUser(null);
+    setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, loginAnonymous, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, loginAnonymous, logout }}>
       {children}
     </AuthContext.Provider>
   );

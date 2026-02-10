@@ -7,7 +7,7 @@ export default function AppShell() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="flex h-screen bg-warmgray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar onLogout={logout} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header displayName={user?.displayName || 'Friend'} onLogout={logout} />
